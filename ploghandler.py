@@ -59,20 +59,7 @@ class Lockf(object):
                 pass
 
 
-class RotateLockMixin(object):
-    """Use given lock (f. e. multiprocessing.Lock) to rotate files"""
-
-    def __init__(self, rotlock):
-        self._rotlock = rotlock
-
-    def rotlock(self, block=True):
-        return self._rotlock.acquire(block)
-
-    def rotunlock(self):
-        return self._rotlock.release()
-
-
-class ConcurrentRotatingFileHandler(logging.handlers.RotatingFileHandler, RotateLockMixin):
+class ConcurrentRotatingFileHandler(logging.handlers.RotatingFileHandler):
     """Uses unix file locks for concurrent rollovering files."""
 
     def __init__(self, filename, mode="a", maxBytes=0, backupCount=0, encoding=None,
@@ -86,9 +73,15 @@ class ConcurrentRotatingFileHandler(logging.handlers.RotatingFileHandler, Rotate
         logging.handlers.RotatingFileHandler.__init__(self, filename,
             mode=mode, maxBytes=maxBytes, backupCount=backupCount,
             encoding=encoding, delay=delay)
-        if rotlock is None:
-            rotlock = multiprocessing.Lock()
-        RotateLockMixin.__init__(self, rotlock=rotlock)
+        self._rotlock = rotlock
+        if self._rotlock is None:
+            self._rotlock = multiprocessing.Lock()
+
+    def rotlock(self, block=True):
+        return self._rotlock.acquire(block)
+
+    def rotunlock(self):
+        return self._rotlock.release()
 
     def acquire(self):
         logging.handlers.RotatingFileHandler.acquire(self)
