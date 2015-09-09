@@ -59,7 +59,7 @@ class Lockf(object):
                 pass
 
 
-class ConcurrentRotatingFileHandler(logging.handlers.RotatingFileHandler):
+class PLogHandler(logging.handlers.RotatingFileHandler):
     """Uses unix file locks for concurrent rollovering files."""
 
     def __init__(self, filename, mode="a", maxBytes=0, backupCount=0, encoding=None,
@@ -96,3 +96,6 @@ class ConcurrentRotatingFileHandler(logging.handlers.RotatingFileHandler):
         # disable buffering to make fwrite do 1 write per call (to avoid "concurrency")
         stream = open(self.baseFilename, self.mode, 0)
         return stream
+
+
+ConcurrentRotatingFileHandler = PLogHandler
