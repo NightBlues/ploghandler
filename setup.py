@@ -17,6 +17,7 @@ setup(
     description="Provides concurrent rotating file handler for posix-compatible OSes.",
     license="GPLv3",
     py_modules=["ploghandler"],
+    test_suite="test",
     long_description=get_description(),
     classifiers=[
         "Development Status :: 4 - Beta",
