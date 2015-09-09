@@ -21,6 +21,7 @@ class PLogHandlerTest(unittest.TestCase):
 					result_queue.put(lock.acquire(block=False))
 				elif cmd == "unlock":
 					lock.release()
+					result_queue.put("done")
 
 		p1_c, p1_r = Queue(), Queue()
 		p1 = Process(target=locker, args=(lock_filename, p1_c, p1_r))
@@ -35,6 +36,7 @@ class PLogHandlerTest(unittest.TestCase):
 		p2_c.put("lock")
 		self.assertFalse(p2_r.get())
 		p1_c.put("unlock")
+		p1_r.get()
 		p2_c.put("lock")
 		self.assertTrue(p2_r.get())
 		p2_c.put("unlock")
