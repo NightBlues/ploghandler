@@ -1,5 +1,12 @@
+.. |travis| image:: https://travis-ci.org/NightBlues/ploghandler.svg?branch=master
+   :target: https://travis-ci.org/NightBlues/ploghandler
+   :alt: Build Status
+
+
 Posix Concurrent File Handler
 =============================
+
+|travis|
 
 Provides concurrent rotating file handler for posix-compatible OSes.
 
