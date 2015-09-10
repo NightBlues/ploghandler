@@ -1,6 +1,13 @@
-import unittest
+import collections
+import glob
+import logging
+import os
+import shutil
 import tempfile
+import unittest
+
 from multiprocessing import Process, Queue
+
 
 class PLogHandlerTest(unittest.TestCase):
 
@@ -41,3 +48,42 @@ class PLogHandlerTest(unittest.TestCase):
         self.assertTrue(p2_r.get())
         p2_c.put("unlock")
 
+
+    def test_highload(self):
+        workers_count = 2
+        max_bytes = 1024 * 1024
+        backup_count = 5
+        msg_len = 100
+        msg_count = (max_bytes * backup_count) / (workers_count * msg_len)
+
+        from ploghandler import PLogHandler
+        log = logging.getLogger("test")
+        log_dir = tempfile.mkdtemp()
+        handler = PLogHandler(os.path.join(log_dir, "test.debug.log"),
+            maxBytes=max_bytes, backupCount=backup_count)
+        log.addHandler(handler)
+        log.setLevel(logging.DEBUG)
+
+        def crazylog(l):
+            for i in range(msg_count):
+                log.debug("{0}: {1}".format(
+                    i, l * (msg_len - len(str(i)) - 3)))
+
+        workers = []
+        for i in range(workers_count):
+            wid = chr(65 + i)
+            workers.append((wid, Process(target=crazylog, args=(wid,))))
+            workers[-1][1].start()
+        for w in workers:
+            w[1].join()
+
+        workers_msg_count = collections.defaultdict(lambda: 0)
+        for f in glob.glob(os.path.join(log_dir, "test.debug.log*")):
+            with open(f, "r") as fp:
+                for line in fp.readlines():
+                    workers_msg_count[line.split(" ")[1][0]] += 1
+        for w, c in workers_msg_count.iteritems():
+            self.assertEquals(c, msg_count,
+                "Expected {0} messages from worker {1}, but {2} found.".format(msg_count, w, c))
+
+        shutil.rmtree(log_dir)
