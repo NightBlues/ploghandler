@@ -77,19 +77,10 @@ class PLogHandler(logging.handlers.RotatingFileHandler):
         if self._rotlock is None:
             self._rotlock = multiprocessing.Lock()
 
-    def rotlock(self, block=True):
-        return self._rotlock.acquire(block)
-
-    def rotunlock(self):
-        return self._rotlock.release()
-
-    def acquire(self):
-        logging.handlers.RotatingFileHandler.acquire(self)
-        self.rotlock()
-
-    def release(self):
-        self.rotunlock()
-        logging.handlers.RotatingFileHandler.release(self)
+    def handle(self, record):
+        self._rotlock.acquire(True)
+        logging.handlers.RotatingFileHandler.handle(self, record)
+        self._rotlock.release()
 
     def _open(self):
         """Open the current base file with buffering disabled."""
