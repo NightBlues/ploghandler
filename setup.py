@@ -11,7 +11,7 @@ def get_description():
 
 setup(
     name="ploghandler",
-    version="0.2",
+    version="0.3",
     author="Vadim Radovel",
     author_email="vadim@radovel.ru",
     description="Provides concurrent rotating file handler for posix-compatible OSes.",
