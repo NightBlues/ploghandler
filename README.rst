@@ -10,6 +10,11 @@ of ``ploghandler.Lockf`` class. The Lockf class uses ``fcntl.lockf``
 call described in ``man 3 lockf``. Optinally ``ploghandler.Flock``
 (``man 2 flock``) can be used.
 
+Supported versions:
+-------------------
+
+Currently ``python 2.6`` and ``python 2.7`` are supported. Work for ``python 3.2`` in progress.
+
 Example:
 --------
 
