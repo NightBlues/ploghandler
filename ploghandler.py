@@ -3,6 +3,7 @@
 import fcntl
 import logging.handlers
 import multiprocessing
+import os
 
 
 class Flock(object):
@@ -77,10 +78,21 @@ class PLogHandler(logging.handlers.RotatingFileHandler):
         if self._rotlock is None:
             self._rotlock = multiprocessing.Lock()
 
-    def handle(self, record):
+    def doRollover(self):
         self._rotlock.acquire(True)
-        logging.handlers.RotatingFileHandler.handle(self, record)
-        self._rotlock.release()
+        try:
+            real_file = self._open()
+            # dont rotate already rotated by other process file
+            if os.fstat(self.stream.fileno()) == os.fstat(real_file.fileno()):
+                # make other processes know that file has max size
+                # even their record's size is lower than ours
+                # self.stream.write(" " * (self.maxBytes - self.stream.tell() - 1))
+                self.stream.seek(self.maxBytes - 1)
+                self.stream.flush()
+                logging.handlers.RotatingFileHandler.doRollover(self)
+        finally:
+            self._rotlock.release()
+            self.stream = self._open()
 
     def _open(self):
         """Open the current base file with buffering disabled."""
