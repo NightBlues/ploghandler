@@ -48,13 +48,36 @@ class PLogHandlerTest(unittest.TestCase):
         self.assertTrue(p2_r.get())
         p2_c.put("unlock")
 
-
     def test_highload(self):
         workers_count = 2
         max_bytes = 1024 * 1024
         backup_count = 5
         msg_len = 100
         msg_count = (max_bytes * backup_count) / (workers_count * msg_len)
+        # max size is little greater than really writen
+        msg_count = int(msg_count * 0.5)
+        try:
+            self._test_highload(workers_count, max_bytes, backup_count,
+                (msg_len, msg_len), msg_count)
+        finally:
+            logging.getLogger("test").handlers = []
+
+    def test_highload_different_sizes(self):
+        workers_count = 2
+        max_bytes = 1024 * 1024
+        backup_count = 5
+        msg_len = 100
+        msg_count = (max_bytes * backup_count) / (workers_count * msg_len)
+        # max size is little greater than really writen
+        msg_count = int(msg_count * 0.9)
+        try:
+            self._test_highload(workers_count, max_bytes, backup_count,
+                (int(msg_len * 0.25), int(msg_len * 1.75)), msg_count)
+        finally:
+            logging.getLogger("test").handlers = []
+
+    def _test_highload(self, workers_count, max_bytes, backup_count,
+                        msg_len, msg_count):
 
         from ploghandler import PLogHandler
         log = logging.getLogger("test")
@@ -64,7 +87,7 @@ class PLogHandlerTest(unittest.TestCase):
         log.addHandler(handler)
         log.setLevel(logging.DEBUG)
 
-        def crazylog(l):
+        def crazylog(l, msg_len):
             for i in range(msg_count):
                 log.debug("{0}: {1}".format(
                     i, l * (msg_len - len(str(i)) - 3)))
@@ -72,16 +95,26 @@ class PLogHandlerTest(unittest.TestCase):
         workers = []
         for i in range(workers_count):
             wid = chr(65 + i)
-            workers.append((wid, Process(target=crazylog, args=(wid,))))
+
+            workers.append((wid, Process(target=crazylog,
+                args=(wid, msg_len[i]))))
             workers[-1][1].start()
         for w in workers:
             w[1].join()
 
         workers_msg_count = collections.defaultdict(lambda: 0)
+        workers_msg_nums = collections.defaultdict(lambda: set([]))
         for f in glob.glob(os.path.join(log_dir, "test.debug.log*")):
             with open(f, "r") as fp:
                 for line in fp.readlines():
-                    workers_msg_count[line.split(" ")[1][0]] += 1
+                    if line.strip():
+                        num, msg = line.split(": ")
+                        workers_msg_count[msg[0]] += 1
+                        workers_msg_nums[msg[0]].add(int(num))
+        # expected_nums = set(range(msg_count))
+        # for w, nums in workers_msg_nums.iteritems():
+        #     self.assertEquals(expected_nums, nums, "Following nums of worker {0} disappeared: {1}".format(w, expected_nums - nums))
+
         for w, c in workers_msg_count.iteritems():
             self.assertEquals(c, msg_count,
                 "Expected {0} messages from worker {1}, but {2} found.".format(msg_count, w, c))
