@@ -89,7 +89,7 @@ class PLogHandler(RotatingFileHandler):
     def shouldRollover(self, record):
         # dont rotate already rotated by other process file
         real_file = self._open()
-        if os.fstat(self.stream.fileno()) == os.fstat(real_file.fileno()):
+        if os.fstat(self.stream.fileno()) != os.fstat(real_file.fileno()):
             try:
                 self.acquire()
                 self.flush()
