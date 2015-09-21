@@ -48,6 +48,11 @@ class PLogHandlerTest(unittest.TestCase):
         self.assertTrue(p2_r.get())
         p2_c.put("unlock")
 
+        p1_c.put("quit")
+        p2_c.put("quit")
+        p1.join()
+        p2.join()
+
     def test_highload(self):
         workers_count = 2
         max_bytes = 1024 * 1024
@@ -112,11 +117,11 @@ class PLogHandlerTest(unittest.TestCase):
                         workers_msg_count[msg[0]] += 1
                         workers_msg_nums[msg[0]].add(int(num))
         # expected_nums = set(range(msg_count))
-        # for w, nums in workers_msg_nums.iteritems():
-        #     self.assertEquals(expected_nums, nums, "Following nums of worker {0} disappeared: {1}".format(w, expected_nums - nums))
+        # for w, nums in workers_msg_nums.items():
+        #     self.assertEqual(expected_nums, nums, "Following nums of worker {0} disappeared: {1}".format(w, expected_nums - nums))
 
-        for w, c in workers_msg_count.iteritems():
-            self.assertEquals(c, msg_count,
+        for w, c in workers_msg_count.items():
+            self.assertEqual(c, msg_count,
                 "Expected {0} messages from worker {1}, but {2} found.".format(msg_count, w, c))
 
         shutil.rmtree(log_dir)

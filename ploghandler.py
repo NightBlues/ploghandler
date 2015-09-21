@@ -1,5 +1,6 @@
 """Posix concurrent rotate file logging handler."""
 
+import codecs
 import fcntl
 import multiprocessing
 import os
@@ -13,7 +14,12 @@ class Flock(object):
         self.lock_filename = lock_filename
         self._lock = None
 
-    def acquire(self, block=False):
+    def __del__(self):
+        if self._lock is not None:
+            self._lock.close()
+            self._lock = None
+
+    def acquire(self, block=True):
         if self._lock is None:
             self._lock = open(self.lock_filename, "a")
         if block:
@@ -40,7 +46,12 @@ class Lockf(object):
         self.lock_filename = lock_filename
         self._lock = None
 
-    def acquire(self, block=False):
+    def __del__(self):
+        if self._lock is not None:
+            self._lock.close()
+            self._lock = None
+
+    def acquire(self, block=True):
         if self._lock is None:
             self._lock = open(self.lock_filename, "a")
         if block:
@@ -63,8 +74,8 @@ class Lockf(object):
 class PLogHandler(RotatingFileHandler):
     """Uses unix file locks for concurrent rollovering files."""
 
-    def __init__(self, filename, mode="a", maxBytes=0, backupCount=0, encoding=None,
-        delay=0, rotlock=None):
+    def __init__(self, filename, mode="a", maxBytes=0, backupCount=0,
+                 encoding="utf-8", delay=0, rotlock=None):
         """ConcurrentRotatingFileHandler has one additinal keyword argument
         comparing to RotatingFileHandler - rotlock.
 
@@ -79,6 +90,11 @@ class PLogHandler(RotatingFileHandler):
         if self._rotlock is None:
             self._rotlock = multiprocessing.Lock()
 
+    def __del__(self):
+        if hasattr(self.stream, "close"):
+            self.stream.close()
+            self.stream = None
+
     def emit(self, record):
         try:
             self._rotlock.acquire(True)
@@ -90,13 +106,11 @@ class PLogHandler(RotatingFileHandler):
         # dont rotate already rotated by other process file
         real_file = self._open()
         if os.fstat(self.stream.fileno()) != os.fstat(real_file.fileno()):
-            try:
-                self.acquire()
-                self.flush()
-                self.close()
-            finally:
-                self.release()
-                self.stream = self._open()
+            self.stream.flush()
+            self.stream.close()
+            self.stream = real_file
+        else:
+            real_file.close()
 
         return RotatingFileHandler.shouldRollover(self, record)
 
@@ -129,7 +143,9 @@ class PLogHandler(RotatingFileHandler):
     def _open(self):
         """Open the current base file with buffering disabled."""
         # disable buffering to make fwrite do 1 write per call (to avoid "concurrency")
-        stream = open(self.baseFilename, self.mode, 0)
+        mode = self.mode.replace("b", "") + "b" # python 3 compatibility
+        stream = codecs.open(self.baseFilename, mode, encoding=self.encoding,
+                             buffering=0)
         return stream
 
 
