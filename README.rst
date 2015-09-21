@@ -20,7 +20,7 @@ call described in ``man 3 lockf``. Optinally ``ploghandler.Flock``
 Supported versions:
 -------------------
 
-Currently ``python 2.6`` and ``python 2.7`` are supported. Work for ``python 3.2`` in progress.
+Currently supported versions: ``2.6``, ``2.7`` and ``3.4``.
 
 Example:
 --------
